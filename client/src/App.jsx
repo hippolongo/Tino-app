@@ -3,6 +3,9 @@ import { supabase } from './lib/supabase'
 import { apiRequest } from './lib/api'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import AppShell from './components/layout/AppShell'
+import { getNavItemsByRole } from './components/layout/RoleNav'
+import { useUiStore } from './store/uiStore'
 import './App.css'
 const POLICY_NUMBER_REGEX = /^D\d{5}[A-Z]$/
 
@@ -88,7 +91,8 @@ function App() {
   const [detailedReceiptsRows, setDetailedReceiptsRows] = useState([])
   const [openingBalanceReport, setOpeningBalanceReport] = useState(0)
   const [closingBalanceReport, setClosingBalanceReport] = useState(0)
-  const [activeTab, setActiveTab] = useState('overview')
+  const activeTab = useUiStore((state) => state.activeRoute)
+  const setActiveTab = useUiStore((state) => state.setActiveRoute)
 
   const isLogin = useMemo(() => mode === 'login', [mode])
   const totalCasketsAvailable = useMemo(
@@ -744,151 +748,37 @@ function App() {
     const isManager = isGeneralManager || isBranchManager
     const mustResetPassword = Boolean(profile?.must_reset_password)
     const adminPendingUsers = adminUsers.filter((u) => !u.is_approved).length
+    const navItems = getNavItemsByRole(profile?.role)
+    const portalSubtitle = isAdmin
+      ? 'System Admin Portal'
+      : isPolicyHolder
+        ? 'Policy Holder Portal'
+        : isGeneralManager
+          ? 'General Manager Portal'
+          : isBranchManager
+            ? 'Branch Manager Portal'
+            : 'Stock Operations Portal'
 
     return (
-      <main className="app-shell">
-        <header className="app-topbar">
-          <div className="topbar-left">
-            <strong>Doves Holdings</strong>
-            <span>
-              {isAdmin
-                ? 'System Admin Portal'
-                : isPolicyHolder
-                  ? 'Policy Holder Portal'
-                  : isGeneralManager
-                    ? 'General Manager Portal'
-                    : isBranchManager
-                      ? 'Branch Manager Portal'
-                      : 'Stock Operations Portal'}
-            </span>
-          </div>
-          <div className="topbar-right">
-            <span className="user-chip">
-              {session.user.email}
-              {profile?.role ? ` • ${profile.role}` : ''}
-            </span>
-            <button type="button" className="secondary-btn" onClick={handleLogout} disabled={loading}>
-              {loading ? 'Please wait...' : 'Log out'}
-            </button>
-          </div>
-        </header>
-        <section className="app-content">
-          <div className="auth-card dashboard-card">
-            <div className="dashboard-header">
+      <AppShell
+        title="Doves Holdings Dashboard"
+        subtitle={portalSubtitle}
+        userEmail={session.user.email}
+        role={profile?.role}
+        navItems={navItems}
+        activeRoute={activeTab}
+        onRouteChange={setActiveTab}
+        onOpenProfile={openProfileTab}
+        onLogout={handleLogout}
+        loading={loading}
+      >
+        <div className="auth-card dashboard-card">
+          <div className="dashboard-header">
               <div>
                 <h2>{isAdmin ? 'System Administrator Dashboard' : 'Operations Dashboard'}</h2>
                 <p className="muted">Welcome back. Here is your system overview.</p>
               </div>
             </div>
-
-            <nav className="top-nav">
-              <button
-                type="button"
-                className={`nav-btn ${activeTab === 'overview' ? 'active' : ''}`}
-                onClick={() => setActiveTab('overview')}
-              >
-                Overview
-              </button>
-              <button
-                type="button"
-                className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`}
-                onClick={openProfileTab}
-              >
-                Profile
-              </button>
-              {isAdmin ? (
-                <button
-                  type="button"
-                  className={`nav-btn ${activeTab === 'users' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('users')}
-                >
-                  Users
-                </button>
-              ) : isPolicyHolder ? (
-                <>
-                  <button
-                    type="button"
-                    className={`nav-btn ${activeTab === 'my-claims' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('my-claims')}
-                  >
-                    My Claims
-                  </button>
-                  <button
-                    type="button"
-                    className={`nav-btn ${activeTab === 'new-claim' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('new-claim')}
-                  >
-                    Submit Claim
-                  </button>
-                </>
-              ) : isStoresClerk ? (
-                <>
-                  <button
-                    type="button"
-                    className={`nav-btn ${activeTab === 'clerk-claims' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('clerk-claims')}
-                  >
-                    Claim Approvals
-                  </button>
-                  <button
-                    type="button"
-                    className={`nav-btn ${activeTab === 'clerk-receipts' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('clerk-receipts')}
-                  >
-                    Record Received Caskets
-                  </button>
-                  <button
-                    type="button"
-                    className={`nav-btn ${activeTab === 'stock-reports' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('stock-reports')}
-                  >
-                    Stock Reports
-                  </button>
-                </>
-              ) : isBranchManager ? (
-                <>
-                  <button
-                    type="button"
-                    className={`nav-btn ${activeTab === 'manager-claims' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('manager-claims')}
-                  >
-                    Manager Approvals
-                  </button>
-                  <button
-                    type="button"
-                    className={`nav-btn ${activeTab === 'stock-reports' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('stock-reports')}
-                  >
-                    Stock Reports
-                  </button>
-                </>
-              ) : isGeneralManager ? (
-                <button
-                  type="button"
-                  className={`nav-btn ${activeTab === 'gm-reports' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('gm-reports')}
-                >
-                  GM Reports
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className={`nav-btn ${activeTab === 'receive' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('receive')}
-                  >
-                    Receive Stock
-                  </button>
-                  <button
-                    type="button"
-                    className={`nav-btn ${activeTab === 'dispatch' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('dispatch')}
-                  >
-                    Dispatch/Issue
-                  </button>
-                </>
-              )}
-            </nav>
 
             {mustResetPassword ? (
               <section className="panel">
@@ -2239,9 +2129,8 @@ function App() {
             ) : null}
             {message ? <p className="message success">{message}</p> : null}
             {error ? <p className="message error">{error}</p> : null}
-          </div>
-        </section>
-      </main>
+        </div>
+      </AppShell>
     )
   }
 
