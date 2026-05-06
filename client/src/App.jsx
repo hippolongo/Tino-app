@@ -28,6 +28,11 @@ function App() {
   const [adminEdits, setAdminEdits] = useState({})
   const [resetPassword, setResetPassword] = useState('')
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState('')
+  const [profileUsername, setProfileUsername] = useState('')
+  const [profileCity, setProfileCity] = useState('')
+  const [profilePhysicalAddress, setProfilePhysicalAddress] = useState('')
+  const [profileNewPassword, setProfileNewPassword] = useState('')
+  const [profileNewPasswordConfirm, setProfileNewPasswordConfirm] = useState('')
 
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
@@ -293,6 +298,13 @@ function App() {
     return () => subscription.unsubscribe()
   }, [loadDashboardData])
 
+  const openProfileTab = () => {
+    setActiveTab('profile')
+    setProfileUsername(session?.user?.user_metadata?.username || '')
+    setProfileCity(profile?.city || '')
+    setProfilePhysicalAddress(profile?.physical_address || '')
+  }
+
   const handleLogin = async (event) => {
     event.preventDefault()
     resetFeedback()
@@ -462,6 +474,57 @@ function App() {
       await loadDashboardData(session.access_token)
     } catch (resetError) {
       setError(resetError.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUpdateMyProfile = async (event) => {
+    event.preventDefault()
+    if (!session) return
+    resetFeedback()
+    setLoading(true)
+    try {
+      await apiRequest('/api/me/profile', {
+        method: 'PATCH',
+        token: session.access_token,
+        body: {
+          username: profileUsername,
+          city: profileCity,
+          physicalAddress: profilePhysicalAddress,
+        },
+      })
+      await supabase.auth.refreshSession()
+      setMessage('Profile updated successfully.')
+      await loadDashboardData(session.access_token)
+    } catch (updateError) {
+      setError(updateError.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleChangeMyPassword = async (event) => {
+    event.preventDefault()
+    if (!session) return
+    resetFeedback()
+    if (profileNewPassword !== profileNewPasswordConfirm) {
+      setError('Passwords do not match.')
+      return
+    }
+    setLoading(true)
+    try {
+      await apiRequest('/api/me/password', {
+        method: 'PATCH',
+        token: session.access_token,
+        body: { newPassword: profileNewPassword },
+      })
+      setProfileNewPassword('')
+      setProfileNewPasswordConfirm('')
+      setMessage('Password updated successfully.')
+      await loadDashboardData(session.access_token)
+    } catch (passwordError) {
+      setError(passwordError.message)
     } finally {
       setLoading(false)
     }
@@ -726,6 +789,13 @@ function App() {
               >
                 Overview
               </button>
+              <button
+                type="button"
+                className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`}
+                onClick={openProfileTab}
+              >
+                Profile
+              </button>
               {isAdmin ? (
                 <button
                   type="button"
@@ -854,6 +924,77 @@ function App() {
 
             {!mustResetPassword ? (
               <>
+                {activeTab === 'profile' ? (
+                  <section className="panel">
+                    <h3>My Profile</h3>
+                    <form className="auth-form compact" onSubmit={handleUpdateMyProfile}>
+                      <label htmlFor="profile-email">Email</label>
+                      <input id="profile-email" type="text" value={session.user.email} disabled />
+
+                      <label htmlFor="profile-role">Role</label>
+                      <input id="profile-role" type="text" value={profile?.role || '-'} disabled />
+
+                      <label htmlFor="profile-username">Username</label>
+                      <input
+                        id="profile-username"
+                        type="text"
+                        minLength={2}
+                        required
+                        value={profileUsername}
+                        onChange={(event) => setProfileUsername(event.target.value)}
+                      />
+
+                      <label htmlFor="profile-city">City</label>
+                      <input
+                        id="profile-city"
+                        type="text"
+                        required
+                        value={profileCity}
+                        onChange={(event) => setProfileCity(event.target.value)}
+                      />
+
+                      <label htmlFor="profile-address">Physical Address</label>
+                      <input
+                        id="profile-address"
+                        type="text"
+                        required
+                        value={profilePhysicalAddress}
+                        onChange={(event) => setProfilePhysicalAddress(event.target.value)}
+                      />
+
+                      <button type="submit" className="primary-btn" disabled={loading}>
+                        Save Profile
+                      </button>
+                    </form>
+
+                    <hr style={{ margin: '18px 0', opacity: 0.2 }} />
+
+                    <h3>Change Password</h3>
+                    <form className="auth-form compact" onSubmit={handleChangeMyPassword}>
+                      <label htmlFor="profile-new-password">New Password</label>
+                      <input
+                        id="profile-new-password"
+                        type="password"
+                        minLength={6}
+                        required
+                        value={profileNewPassword}
+                        onChange={(event) => setProfileNewPassword(event.target.value)}
+                      />
+                      <label htmlFor="profile-new-password-confirm">Confirm New Password</label>
+                      <input
+                        id="profile-new-password-confirm"
+                        type="password"
+                        minLength={6}
+                        required
+                        value={profileNewPasswordConfirm}
+                        onChange={(event) => setProfileNewPasswordConfirm(event.target.value)}
+                      />
+                      <button type="submit" className="primary-btn" disabled={loading}>
+                        Update Password
+                      </button>
+                    </form>
+                  </section>
+                ) : null}
                 {activeTab === 'overview' ? (
                   <>
                     <section className="panel kpi-grid">

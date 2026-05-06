@@ -1235,6 +1235,44 @@ app.patch('/api/me/password', async (req, res) => {
   return res.json({ ok: true })
 })
 
+app.patch('/api/me/profile', async (req, res) => {
+  const auth = await requireApprovedProfile(req, res)
+  if (!auth) return
+  const { user } = auth
+
+  const { username, city, physicalAddress } = req.body ?? {}
+
+  const hasAny =
+    username !== undefined || city !== undefined || physicalAddress !== undefined
+  if (!hasAny) {
+    return res.status(400).json({ error: 'Provide at least one of username, city, physicalAddress' })
+  }
+
+  if (username !== undefined) {
+    const nextUsername = String(username).trim()
+    if (nextUsername.length < 2) {
+      return res.status(400).json({ error: 'username must be at least 2 characters' })
+    }
+    const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      user_metadata: { username: nextUsername },
+    })
+    if (updateAuthError) return res.status(400).json({ error: updateAuthError.message })
+  }
+
+  const profileUpdates = {}
+  if (city !== undefined) profileUpdates.city = String(city).trim() || null
+  if (physicalAddress !== undefined) profileUpdates.physical_address = String(physicalAddress).trim() || null
+  if (Object.keys(profileUpdates).length) {
+    const { error: profileUpdateError } = await supabaseAdmin
+      .from('user_profiles')
+      .update(profileUpdates)
+      .eq('user_id', user.id)
+    if (profileUpdateError) return res.status(400).json({ error: profileUpdateError.message })
+  }
+
+  return res.json({ ok: true })
+})
+
 app.delete('/api/admin/users/:userId', async (req, res) => {
   const auth = await requireAdmin(req, res)
   if (!auth) return
