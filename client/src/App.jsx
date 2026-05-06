@@ -151,7 +151,7 @@ function App() {
         const [issuesData, lowStockData, summaryData] = await Promise.all([
           apiRequest('/api/reports/issues', { token }),
           apiRequest('/api/reports/low-stock?threshold=5', { token }),
-          apiRequest('/api/reports/stock-summary?period=weekly', { token }),
+          apiRequest('/api/reports/stock-summary?period=weekly&view=company', { token }),
         ])
         setIssuedReportRows(issuesData.rows || [])
         setTotalIssuedFromReport(issuesData.totalIssued || 0)
@@ -2249,7 +2249,7 @@ function App() {
     <main className="auth-page">
       <section className="brand-panel">
         <div className="brand-mark">Doves Holdings</div>
-        <h1>Secure Access Portal</h1>
+        <h1>Casket Asset Tracking </h1>
         <p>
           Sign in or create your account to manage policies, branches, stores, and administrative
           tasks.
