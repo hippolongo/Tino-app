@@ -1460,15 +1460,25 @@ function App() {
                       onClick={() => {
                         const doc = new jsPDF()
                         doc.setFontSize(14)
-                        doc.text('Doves Holdings - Stock Summary Report', 14, 14)
+                        doc.text('Doves Holdings - Stock Report', 14, 14)
                         doc.setFontSize(10)
                         doc.text(
                           `Period: ${stockReportPeriod}${stockReportPeriod === 'range' ? ` (${stockReportFrom} to ${stockReportTo})` : ''}`,
                           14,
                           20,
                         )
+
+                        let cursorY = 26
+
                         autoTable(doc, {
-                          startY: 26,
+                          startY: cursorY,
+                          head: [['Opening Balance (start date)', 'Closing Balance (end date)']],
+                          body: [[String(openingBalanceReport), String(closingBalanceReport)]],
+                        })
+                        cursorY = doc.lastAutoTable.finalY + 8
+
+                        autoTable(doc, {
+                          startY: cursorY,
                           head: [['Branch', 'Casket', 'Stock In', 'Stock Out', 'Net']],
                           body: stockSummaryRows.map((row) => [
                             row.branch?.name || '-',
@@ -1478,7 +1488,43 @@ function App() {
                             String(row.net),
                           ]),
                         })
-                        doc.save(`stock-summary-${stockReportPeriod}.pdf`)
+                        cursorY = doc.lastAutoTable.finalY + 8
+
+                        autoTable(doc, {
+                          startY: cursorY,
+                          head: [['Date', 'Description', 'Branch']],
+                          body: detailedLedgerRows.map((row) => [
+                            new Date(row.date).toLocaleDateString(),
+                            row.description,
+                            row.branch?.name || '-',
+                          ]),
+                        })
+                        cursorY = doc.lastAutoTable.finalY + 8
+
+                        autoTable(doc, {
+                          startY: cursorY,
+                          head: [['Date', 'Policy #', 'Policy Holder', 'Claimed By']],
+                          body: detailedClaimsRows.map((row) => [
+                            new Date(row.date).toLocaleDateString(),
+                            row.policy_number,
+                            row.policy_holder_name,
+                            row.claimed_by,
+                          ]),
+                        })
+                        cursorY = doc.lastAutoTable.finalY + 8
+
+                        autoTable(doc, {
+                          startY: cursorY,
+                          head: [['Date', 'Document', 'Received By', 'Branch']],
+                          body: detailedReceiptsRows.map((row) => [
+                            new Date(row.date).toLocaleDateString(),
+                            row.delivery_note_name,
+                            row.received_by,
+                            row.branch?.name || '-',
+                          ]),
+                        })
+
+                        doc.save(`stock-report-${stockReportPeriod}.pdf`)
                       }}
                     >
                       Export PDF
