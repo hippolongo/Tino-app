@@ -2,6 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const dotenv = require('dotenv')
 const { createClient } = require('@supabase/supabase-js')
+const path = require('path')
 
 dotenv.config()
 
@@ -9,6 +10,7 @@ const app = express()
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 5000
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173'
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -30,11 +32,17 @@ const ADMIN_ROLE = 'System Administrator'
 
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    origin: IS_PRODUCTION ? true : CORS_ORIGIN,
     credentials: true,
   }),
 )
 app.use(express.json())
+
+// In production we serve the built React app from Server/public.
+if (IS_PRODUCTION) {
+  const publicDir = path.join(__dirname, 'public')
+  app.use(express.static(publicDir))
+}
 
 const validateSupabase = (res) => {
   if (!supabaseAdmin) {
@@ -1255,9 +1263,18 @@ app.delete('/api/admin/users/:userId', async (req, res) => {
   return res.json({ ok: true })
 })
 
-app.get('/', (_req, res) => {
-  res.json({ service: 'server', status: 'running' })
-})
+// SPA fallback (must be after all /api routes).
+if (IS_PRODUCTION) {
+  // Express 5 / path-to-regexp doesn't support "*" as a route string.
+  // Use a regex fallback and explicitly exclude /api routes.
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    return res.sendFile(path.join(__dirname, 'public', 'index.html'))
+  })
+} else {
+  app.get('/', (_req, res) => {
+    res.json({ service: 'server', status: 'running' })
+  })
+}
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console

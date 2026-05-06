@@ -13,4 +13,10 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Build the SPA into the Express server's static directory.
+    // This enables a single Render web service to serve both frontend + API.
+    outDir: '../Server/public',
+    emptyOutDir: true,
+  },
 })

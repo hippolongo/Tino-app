@@ -1,0 +1,13 @@
+{
+  "name": "tino-app",
+  "private": true,
+  "workspaces": [
+    "client",
+    "Server"
+  ],
+  "scripts": {
+    "build": "npm --workspace client run build",
+    "start": "npm --workspace Server start"
+  }
+}
+
